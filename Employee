@@ -1,0 +1,50 @@
+import requests
+from bs4 import BeautifulSoup
+
+def findTotalArticlesByLanguages(languages):
+    # URL of the webpage
+    url = 'https://meta.wikimedia.org/wiki/List_of_Wikipedias/Table'
+
+    # Send an HTTP GET request to the webpage
+    response = requests.get(url)
+    if response.status_code != 200:
+        print("Failed to retrieve the webpage")
+        return None
+
+    # Parse the webpage content with BeautifulSoup
+    soup = BeautifulSoup(response.text, 'html.parser')
+
+    # Find the table containing the required data
+    table = soup.find('table', {'class': 'wikitable'})
+    if not table:
+        print("Table not found")
+        return None
+
+    # Initialize a dictionary to map language names to their article counts
+    language_data = {}
+
+    # Iterate over each row in the table (skipping the header row)
+    for row in table.find_all('tr')[1:]:
+        cols = row.find_all('td')
+        if len(cols) >= 4:  # Ensure the row has enough columns
+            language = cols[0].get_text(strip=True)
+            articles = cols[2].get_text(strip=True).replace(',', '')  # Remove commas for numbers
+
+            # Only process if the language is in the provided languages list
+            if language in languages:
+                try:
+                    # Add the language and its article count to the dictionary
+                    language_data[language] = int(articles)
+                except ValueError:
+                    # If we encounter a value that can't be converted to int, skip it
+                    continue
+
+    # Calculate the total number of articles for the specified languages
+    total_articles = sum(language_data.get(lang, 0) for lang in languages)
+    
+    return total_articles
+
+# Example usage
+languages = ["English", "German"]
+total = findTotalArticlesByLanguages(languages)
+print(f"Total articles for {languages}: {total}")
